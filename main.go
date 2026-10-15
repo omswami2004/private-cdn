@@ -149,6 +149,7 @@ func (s *server) routes() http.Handler {
 	mux.Handle("GET /fetch", s.auth(http.HandlerFunc(s.handleFetchPage)))
 	mux.Handle("GET /fetch/api/jobs", s.auth(http.HandlerFunc(s.handleFetchJobs)))
 	mux.Handle("POST /fetch/api/jobs", s.auth(http.HandlerFunc(s.handleFetchAdd)))
+	mux.Handle("POST /fetch/api/clear", s.auth(http.HandlerFunc(s.handleFetchClear)))
 
 	return securityHeaders(mux)
 }
