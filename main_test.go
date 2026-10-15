@@ -291,3 +291,25 @@ func TestFetchRefusesPrivateAddresses(t *testing.T) {
 		t.Fatal("public address refused")
 	}
 }
+
+func TestFetchClearKeepsActiveJobs(t *testing.T) {
+	s, h, _ := newTestServer(t)
+	c := login(t, h)
+	f := s.fetcher
+	f.jobs = []*job{{ID: "a", Status: "done"}, {ID: "b", Status: "downloading"}, {ID: "c", Status: "error"}, {ID: "d", Status: "queued"}}
+
+	if rec := do(h, "POST", "/fetch/api/clear", nil, map[string]string{"Origin": "https://evil.example"}, c); rec.Code != http.StatusForbidden {
+		t.Fatalf("cross-site clear: %d", rec.Code)
+	}
+	rec := do(h, "POST", "/fetch/api/clear", nil, map[string]string{"Origin": testURL}, c)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"cleared":2`) {
+		t.Fatalf("clear: %d %s", rec.Code, rec.Body)
+	}
+	var ids []string
+	for _, j := range f.snapshot() {
+		ids = append(ids, j.ID)
+	}
+	if strings.Join(ids, ",") != "d,b" {
+		t.Fatalf("kept %v, want the queued and downloading jobs", ids)
+	}
+}

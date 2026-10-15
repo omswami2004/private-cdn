@@ -126,6 +126,23 @@ func (f *fetcher) snapshot() []job {
 	return out
 }
 
+// clearFinished drops done and failed jobs from the list, keeping the ones
+// still queued or running.
+func (f *fetcher) clearFinished() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	kept := f.jobs[:0]
+	for _, j := range f.jobs {
+		if j.Status != "done" && j.Status != "error" {
+			kept = append(kept, j)
+		}
+	}
+	n := len(f.jobs) - len(kept)
+	clear(f.jobs[len(kept):])
+	f.jobs = kept
+	return n
+}
+
 func (f *fetcher) run(j *job) {
 	f.sem <- struct{}{}
 	defer func() { <-f.sem }()
@@ -342,6 +359,10 @@ func (s *server) handleFetchPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) handleFetchJobs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.fetcher.snapshot())
+}
+
+func (s *server) handleFetchClear(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]int{"cleared": s.fetcher.clearFinished()})
 }
 
 var linkRe = regexp.MustCompile(`https?://\S+`)

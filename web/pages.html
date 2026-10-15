@@ -142,7 +142,8 @@ if(up) up.onchange = ()=>{
     <span id="msg" class="muted"></span>
   </div>
 </div>
-<h3>Downloads</h3>
+<div class="tools" style="margin-top:20px"><h3 style="margin:0">Downloads</h3>
+  <button id="clear" style="margin-left:auto" hidden>Clear finished</button></div>
 <div class="card"><table id="jobs"><tr><td class="muted">Nothing yet</td></tr></table></div>
 <script>
 const fmt = n=>{const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<4){n/=1024;i++}return (i?n.toFixed(1):n)+' '+u[i]};
@@ -153,9 +154,14 @@ document.getElementById('go').onclick = async ()=>{
        m.textContent = r.added.length+' added'; m.className='ok'; document.getElementById('links').value=''; load(); }
   catch(err){ m.textContent = err.message; m.className='err'; }
 };
+document.getElementById('clear').onclick = async ()=>{
+  try{ await post('/fetch/api/clear',{}); load(); }
+  catch(err){ const m = document.getElementById('msg'); m.textContent = err.message; m.className='err'; }
+};
 async function load(){
   const r = await fetch('/fetch/api/jobs'); if(!r.ok) return;
   const jobs = await r.json(); const t = document.getElementById('jobs');
+  document.getElementById('clear').hidden = !jobs.some(j=>j.status==='done'||j.status==='error');
   if(!jobs.length){ t.innerHTML='<tr><td class="muted">Nothing yet</td></tr>'; return; }
   t.innerHTML = jobs.map(j=>{
     const pct = j.total>0 ? Math.min(100,100*j.done/j.total) : 0;
